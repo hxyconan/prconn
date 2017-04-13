@@ -33,27 +33,35 @@ def _parse_jenkins_json(request):
 @base.route("/notification/jenkins", methods=["POST"])
 def jenkins_notification():
     data = _parse_jenkins_json(request)
+    logging.debug("The data request to /notification/jenkins: %s", json.dumps(data))
+
+    git_base_repo = data["build"]["parameters"]["GIT_BASE_REPO"]
+    repo_config = github.get_repo_config(current_app, git_base_repo)
+    if repo_config is None:
+        err_msg = "No repo config for {0}".format(git_base_repo)
+        logging.warn(err_msg)
+        raise NotFound(err_msg)
 
     jenkins_name = data["name"]
     jenkins_number = data["build"]["number"]
-    jenkins_url = data["build"]["full_url"]
+
+    #The full_url parameter does not existed, so get jenkins_domain from settings.py to generate the jenkins full url for this job
+    jenkins_domain = github.get_jenkins_domain(current_app, repo_config)
+    jenkins_url_relative = data["build"]["url"]
+    jenkins_url = jenkins_domain + jenkins_url_relative
+
     phase = data["build"]["phase"]
 
     logging.debug("Received Jenkins notification for %s %s (%s): %s",
                   jenkins_name, jenkins_number, jenkins_url, phase)
 
-    if phase not in ("STARTED", "COMPLETED"):
+    if phase not in ("STARTED", "FINALIZED"):
         return Response(status=204)
 
-    git_base_repo = data["build"]["parameters"]["GIT_BASE_REPO"]
+    
     git_sha1 = data["build"]["parameters"]["GIT_SHA1"]
 
-    repo_config = github.get_repo_config(current_app, git_base_repo)
 
-    if repo_config is None:
-        err_msg = "No repo config for {0}".format(git_base_repo)
-        logging.warn(err_msg)
-        raise NotFound(err_msg)
 
     desc_prefix = "Jenkins build '{0}' #{1}".format(jenkins_name,
                                                     jenkins_number)
@@ -79,6 +87,15 @@ def jenkins_notification():
             abort()
 
     logging.debug(github_desc)
+
+    logging.debug("current_app: '%s', repo_config: '%s', git_base_repo: '%s', git_sha1: '%s', github_state: '%s', github_desc: '%s', jenkins_url: '%s'",
+                 current_app,
+                 repo_config,
+                 git_base_repo,
+                 git_sha1,
+                 github_state,
+                 github_desc,
+                 jenkins_url)
 
     github.update_status(current_app,
                          repo_config,
@@ -107,6 +124,7 @@ def github_notification():
 
     action = request.json["action"]
     pull_request = request.json["pull_request"]
+    body = pull_request["body"]
     number = pull_request["number"]
     html_url = pull_request["html_url"]
     base_repo_name = github.get_repo_name(pull_request, "base")
@@ -114,6 +132,23 @@ def github_notification():
     logging.debug("Received GitHub pull request notification for "
                   "%s %s (%s): %s",
                   base_repo_name, number, html_url, action)
+
+    # Get targetsite name
+    logging.debug("Pull request body message: "
+                  "%s",
+                  body)
+
+    targetsite = ''
+    body_lines = body.split('\r\n')
+    for line in body_lines:
+        if 'site:' in line:
+            targetsite = line.strip('site:').lower()
+            break
+    logging.debug("Targetsite: %s", targetsite)
+
+    if targetsite == '':
+        logging.debug("Targetsite value not given, Jenkins don not know which site to build.")
+        return Response(status=204)
 
     if action not in ("opened", "reopened", "synchronize"):
         logging.debug("Ignored '%s' action." % action)
@@ -157,9 +192,10 @@ def github_notification():
                              "pending",
                              "Jenkins build is being scheduled")
 
-        logging.debug("Scheduling build for %s %s", head_repo_name, sha)
+        logging.debug("Scheduling build the targetsite: %s with %s %s", targetsite, head_repo_name, sha)
         ok = jenkins.schedule_build(current_app,
                                     repo_config,
+                                    targetsite,
                                     head_repo_name,
                                     sha,
                                     html_url)

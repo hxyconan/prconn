@@ -65,6 +65,10 @@ def get_session_for_repo(app, repo_config):
             password = repo_config.get("github_password",
                                        app.config.get("GITHUB_PASSWORD"))
             session.auth = (user, password)
+
+    #logging.debug("session type %s", type(session))
+    #logging.debug("session to %s", session)
+
     return session
 
 
@@ -135,6 +139,7 @@ def update_status(app, repo_config, repo_name, sha, state, desc,
 
     context = repo_config.get("github_context",
                               app.config.get("GITHUB_CONTEXT"))
+
     if context:
         params["context"] = context
 
@@ -146,7 +151,16 @@ def update_status(app, repo_config, repo_name, sha, state, desc,
     logging.debug("Setting status on %s %s to %s", repo_name, sha, state)
 
     s = get_session_for_repo(app, repo_config)
+
+    logging.debug("url: %s, json.dumps: %s, headers: %s", url, json.dumps(params), headers)
+
     response = s.post(url, data=json.dumps(params), headers=headers)
+
+    # response object type: class requests.models.Response
+    logging.debug("Response status_code: %s", response.status_code)
+    logging.debug("Response header: %s", response.headers)
+    logging.debug("Response text: %s", response.text)
+
     if not response.ok:
         logging.error("Unable to set status on %s %s to %s",
                       repo_name, sha, state)
@@ -260,3 +274,11 @@ def get_pull_requests(app, repo_config):
     if not response.ok:
         raise Exception("Unable to get pull requests: status code {}".format(response.status_code))
     return (item for item in response.json)
+
+def get_jenkins_domain(app, repo_config):
+    jenkins_domain = repo_config.get("jenkins_domain",
+                               app.config["JENKINS_DOMAIN"])
+
+    return jenkins_domain
+
+

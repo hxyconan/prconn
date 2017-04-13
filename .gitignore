@@ -2,3 +2,7 @@
 virtualenv
 *.egg-info
 dist
+
+.vagrant/
+
+build/

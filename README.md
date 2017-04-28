@@ -8,11 +8,6 @@
 - Server log file at /var/log/prconn.log
 - User FileHandler instead of original StreamHandler, defined in ./logging.conf
 
-# Start uWSGI automatically in boot
-- /etc/init/prconn.conf defined it
-- Start it manually: #sudo start prconn
-- Stop it manually: #sudo stop prconn
-- Check the Master process and works: #ps aux | grep prconn
 
 # VM instance configuration and installation
 - sudo apt-get install python-pip
@@ -26,5 +21,11 @@ install the python package from local source code, should be execute in the setu
 - For demo purpose, remember to install Jenkins in your demo server
 
 
+# Start uWSGI automatically in boot
+- /etc/init/prconn.conf defined it
+- Start it manually: #sudo start prconn
+- Stop it manually: #sudo stop prconn
+- Check the Master process and works: #ps aux | grep prconn
+
 # Notes
-- More details please refer to Leeroy project
+- More details please refer to Leeroy project readme

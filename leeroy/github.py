@@ -216,9 +216,9 @@ def register_github_hooks(app):
 
         if not response.ok:
             logging.warn("Unable to look up GitHub hooks for repo %s "
-                         "with url %s: %s %s",
+                         "with url %s: %s %s %s",
                          repo_name, url, response.status_code,
-                         response.reason)
+                         response.reason, response.text)
             continue
 
         found_hook = False

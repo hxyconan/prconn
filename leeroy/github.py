@@ -146,7 +146,7 @@ def update_status(app, repo_config, repo_name, sha, state, desc,
     if target_url:
         params["target_url"] = target_url
 
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "User-Agent": "prconn-requests"}
 
     logging.debug("Setting status on %s %s to %s", repo_name, sha, state)
 

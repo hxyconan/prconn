@@ -142,7 +142,7 @@ def github_notification():
     body_lines = body.split('\r\n')
     for line in body_lines:
         if 'site:' in line:
-            targetsite = line.strip('site:').lower()
+            targetsite = line.split(':')[1].lower()
             break
     logging.debug("Targetsite: %s", targetsite)
 

@@ -196,6 +196,7 @@ def github_notification():
         ok = jenkins.schedule_build(current_app,
                                     repo_config,
                                     targetsite,
+                                    number,
                                     head_repo_name,
                                     sha,
                                     html_url)

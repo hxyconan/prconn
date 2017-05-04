@@ -61,10 +61,15 @@ def jenkins_notification():
     
     git_sha1 = data["build"]["parameters"]["GIT_SHA1"]
 
+    # Generate the message for indicate the new pull request site url, showed in github pull request issue profile page when jenkins build successed
+    targetsite = data["build"]["parameters"]["TARGETSITE"]
+    pr_number = data["build"]["parameters"]["NUMBER"]
+    domain_suffix = github.get_domain_suffix(current_app, repo_config)
+    pr_site_url = "http://pr" + pr_number + "." + targetsite + domain_suffix
+    logging.debug("The build pull request site url: %s", pr_site_url)
 
 
-    desc_prefix = "Jenkins build '{0}' #{1}".format(jenkins_name,
-                                                    jenkins_number)
+    desc_prefix = "Build #{0}".format(jenkins_number)
 
     if phase == "STARTED":
         github_state = "pending"
@@ -74,7 +79,7 @@ def jenkins_notification():
 
         if status == "SUCCESS":
             github_state = "success"
-            github_desc = desc_prefix + " has succeeded"
+            github_desc = desc_prefix + " succeeded. " + pr_site_url
         elif status == "FAILURE" or status == "UNSTABLE":
             github_state = "failure"
             github_desc = desc_prefix + " has failed"

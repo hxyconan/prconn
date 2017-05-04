@@ -281,4 +281,10 @@ def get_jenkins_domain(app, repo_config):
 
     return jenkins_domain
 
+def get_domain_suffix(app, repo_config):
+    domain_suffix = repo_config.get("domain_suffix",
+                               app.config["DOMAIN_SUFFIX"])
+
+    return domain_suffix
+
 

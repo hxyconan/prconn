@@ -173,7 +173,7 @@ def github_notification():
       html_url = pull_request["html_url"]
 
       domain_suffix = github.get_domain_suffix(current_app, repo_config)
-      host_name = "pr" + number
+      host_name = "pr" + str(number)
       pr_site_url = "http://" + host_name + "." + targetsite + domain_suffix
 
       logging.debug("Deleting the site: %s", pr_site_url)

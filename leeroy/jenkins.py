@@ -23,14 +23,14 @@ auth_token_root_build_path = "/buildByToken/buildWithParameters" \
 
 # Path define for delete pull request sandbox
 normal_delete_path = "/job/{delete_job_name}/buildWithParameters"\
-    "&TARGETSITE={targetsite}" \
-    "&HOST_NAME={host_name}" \
+    "?targetsite={targetsite}" \
+    "&host_name={host_name}" \
     "&GITHUB_URL={github_url}"
 
 auth_token_root_delete_path = "/buildByToken/buildWithParameters" \
     "?job={delete_job_name}" \
-    "&TARGETSITE={targetsite}" \
-    "&HOST_NAME={host_name}" \
+    "&targetsite={targetsite}" \
+    "&host_name={host_name}" \
     "&GITHUB_URL={github_url}"
 
 
@@ -83,7 +83,7 @@ def schedule_build(app, repo_config, targetsite, number, head_repo_name, sha, ht
 ##
 # Function to run jenkins job to delete a pull request sandbox
 ##
-def schedule_delete(current_app, repo_config, targetsite, host_name, html_url):
+def schedule_delete(app, repo_config, targetsite, host_name, html_url):
     base_repo_name = repo_config["github_repo"]
     delete_job_name = repo_config["jenkins_delete_job_name"]
 
@@ -93,10 +93,12 @@ def schedule_delete(current_app, repo_config, targetsite, host_name, html_url):
         delete_path = normal_delete_path
 
     url = get_jenkins_url(app, repo_config) + \
-        delete_path.format(job_name=job_name,
+        delete_path.format(delete_job_name=delete_job_name,
                           targetsite=targetsite,
                           host_name=host_name,
                           github_url=html_url)
+
+    logging.debug("the jenkins delete action url: %s", url)
 
     build_token = repo_config.get("jenkins_build_token",
                                   app.config.get("JENKINS_BUILD_TOKEN"))

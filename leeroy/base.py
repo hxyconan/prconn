@@ -155,7 +155,7 @@ def github_notification():
         logging.debug("Targetsite value not given, Jenkins don not know which site to build.")
         return Response(status=204)
 
-    if action not in ("opened", "reopened", "synchronize"):
+    if action not in ("opened", "reopened", "synchronize", "closed"):
         logging.debug("Ignored '%s' action." % action)
         return Response(status=204)
 
@@ -166,58 +166,96 @@ def github_notification():
         logging.warn(err_msg)
         raise NotFound(err_msg)
 
-    # There is a race condition in the GitHub API in which requesting
-    # the commits for a pull request can return a 404.  Try a few
-    # times and back off if we get an error.
-    tries_left = 5
-    while True:
-        tries_left -= 1
-        try:
-            head_repo_name, shas = github.get_commits(current_app,
-                                                      repo_config,
-                                                      pull_request)
-            break
-        except Exception, e:
-            if tries_left == 0:
-                raise
 
-            logging.debug("Got exception fetching commits (tries left: %d): %s",
-                          tries_left, e)
-            time.sleep(5 - tries_left)
+    # If the action is "closed", when request to merge the pull request or close the pull request, we need to delete the generated sandbox
+    if action in ("closed"):
+      logging.debug("Closed pull request action raised. Will delete a pull request sandbox now.")
+      html_url = pull_request["html_url"]
 
-    logging.debug("Trigging builds for %d commits", len(shas))
+      domain_suffix = github.get_domain_suffix(current_app, repo_config)
+      host_name = "pr" + number
+      pr_site_url = "http://" + host_name + "." + targetsite + domain_suffix
 
-    html_url = pull_request["html_url"]
+      logging.debug("Deleting the site: %s", pr_site_url)
 
-    for sha in shas:
-        github.update_status(current_app,
-                             repo_config,
-                             base_repo_name,
-                             sha,
-                             "pending",
-                             "Jenkins build is being scheduled")
+      # Run the jenkins delete job
+      ok = jenkins.schedule_delete(current_app,
+                                  repo_config,
+                                  targetsite,
+                                  host_name,
+                                  html_url)
 
-        logging.debug("Scheduling build the targetsite: %s with %s %s", targetsite, head_repo_name, sha)
-        ok = jenkins.schedule_build(current_app,
-                                    repo_config,
-                                    targetsite,
-                                    number,
-                                    head_repo_name,
-                                    sha,
-                                    html_url)
+      if ok:
+          github_state = "pending"
+          github_desc = "Jenkins deleted pull request sandbox queued"
+      else:
+          github_state = "error"
+          github_desc = "Scheduling delete pull request sandbox failed"
 
-        if ok:
-            github_state = "pending"
-            github_desc = "Jenkins build has been queued"
-        else:
-            github_state = "error"
-            github_desc = "Scheduling Jenkins job failed"
+      github.update_status(current_app,
+                           repo_config,
+                           base_repo_name,
+                           sha,
+                           github_state,
+                           github_desc)
 
-        github.update_status(current_app,
-                             repo_config,
-                             base_repo_name,
-                             sha,
-                             github_state,
-                             github_desc)
+      return Response(status=204)
 
-    return Response(status=204)
+    #for open or reopen or synchronize actions
+    else:
+      # There is a race condition in the GitHub API in which requesting
+      # the commits for a pull request can return a 404.  Try a few
+      # times and back off if we get an error.
+      tries_left = 5
+      while True:
+          tries_left -= 1
+          try:
+              head_repo_name, shas = github.get_commits(current_app,
+                                                        repo_config,
+                                                        pull_request)
+              break
+          except Exception, e:
+              if tries_left == 0:
+                  raise
+
+              logging.debug("Got exception fetching commits (tries left: %d): %s",
+                            tries_left, e)
+              time.sleep(5 - tries_left)
+
+      logging.debug("Trigging builds for %d commits", len(shas))
+
+      html_url = pull_request["html_url"]
+
+      for sha in shas:
+          github.update_status(current_app,
+                               repo_config,
+                               base_repo_name,
+                               sha,
+                               "pending",
+                               "Jenkins build is being scheduled")
+
+          logging.debug("Scheduling build the targetsite: %s with %s %s", targetsite, head_repo_name, sha)
+          ok = jenkins.schedule_build(current_app,
+                                      repo_config,
+                                      targetsite,
+                                      number,
+                                      head_repo_name,
+                                      sha,
+                                      html_url)
+
+          if ok:
+              github_state = "pending"
+              github_desc = "Jenkins build has been queued"
+          else:
+              github_state = "error"
+              github_desc = "Scheduling Jenkins job failed"
+
+          github.update_status(current_app,
+                               repo_config,
+                               base_repo_name,
+                               sha,
+                               github_state,
+                               github_desc)
+
+      return Response(status=204)
+

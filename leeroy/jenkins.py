@@ -3,7 +3,7 @@
 import logging
 import requests
 
-
+# Path define for build pull request sandbox
 normal_build_path = "/job/{job_name}/buildWithParameters"\
     "?GIT_BASE_REPO={git_base_repo}" \
     "&GIT_HEAD_REPO={git_head_repo}" \
@@ -12,7 +12,6 @@ normal_build_path = "/job/{job_name}/buildWithParameters"\
     "&GIT_SHA1={git_sha1}" \
     "&GITHUB_URL={github_url}"
 
-
 auth_token_root_build_path = "/buildByToken/buildWithParameters" \
     "?job={job_name}" \
     "&GIT_BASE_REPO={git_base_repo}" \
@@ -20,6 +19,18 @@ auth_token_root_build_path = "/buildByToken/buildWithParameters" \
     "&TARGETSITE={targetsite}" \
     "&NUMBER={number}" \
     "&GIT_SHA1={git_sha1}" \
+    "&GITHUB_URL={github_url}"
+
+# Path define for delete pull request sandbox
+normal_delete_path = "/job/{delete_job_name}/buildWithParameters"\
+    "&TARGETSITE={targetsite}" \
+    "&HOST_NAME={host_name}" \
+    "&GITHUB_URL={github_url}"
+
+auth_token_root_delete_path = "/buildByToken/buildWithParameters" \
+    "?job={delete_job_name}" \
+    "&TARGETSITE={targetsite}" \
+    "&HOST_NAME={host_name}" \
     "&GITHUB_URL={github_url}"
 
 
@@ -67,4 +78,36 @@ def schedule_build(app, repo_config, targetsite, number, head_repo_name, sha, ht
     logging.debug("Jenkins responded with status code %s",
                   response.status_code)
     return response.status_code < 400
+
+
+##
+# Function to run jenkins job to delete a pull request sandbox
+##
+def schedule_delete(current_app, repo_config, targetsite, host_name, html_url):
+    base_repo_name = repo_config["github_repo"]
+    delete_job_name = repo_config["jenkins_delete_job_name"]
+
+    if app.config.get("JENKINS_AUTH_TOKEN_ROOT_BUILD"):
+        delete_path = auth_token_root_delete_path
+    else:
+        delete_path = normal_delete_path
+
+    url = get_jenkins_url(app, repo_config) + \
+        delete_path.format(job_name=job_name,
+                          targetsite=targetsite,
+                          host_name=host_name,
+                          github_url=html_url)
+
+    build_token = repo_config.get("jenkins_build_token",
+                                  app.config.get("JENKINS_BUILD_TOKEN"))
+
+    if build_token is not None:
+        url += "&token=" + build_token
+
+    logging.debug("Requesting delete from Jenkins: %s", url)
+    ###response = requests.post(url)
+    logging.debug("Jenkins responded with status code %s",
+                  response.status_code)
+    return response.status_code < 400
+
 

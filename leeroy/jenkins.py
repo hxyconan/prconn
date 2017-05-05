@@ -98,8 +98,6 @@ def schedule_delete(app, repo_config, targetsite, host_name, html_url):
                           host_name=host_name,
                           github_url=html_url)
 
-    logging.debug("the jenkins delete action url: %s", url)
-
     build_token = repo_config.get("jenkins_build_token",
                                   app.config.get("JENKINS_BUILD_TOKEN"))
 
@@ -107,7 +105,7 @@ def schedule_delete(app, repo_config, targetsite, host_name, html_url):
         url += "&token=" + build_token
 
     logging.debug("Requesting delete from Jenkins: %s", url)
-    ###response = requests.post(url)
+    response = requests.post(url)
     logging.debug("Jenkins responded with status code %s",
                   response.status_code)
     return response.status_code < 400

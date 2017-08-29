@@ -213,6 +213,9 @@ def github_notification():
               head_repo_name, shas = github.get_commits(current_app,
                                                         repo_config,
                                                         pull_request)
+              author_name, author_email = github.get_commit_author(current_app,
+                                                                   repo_config,
+                                                                   pull_request)
               break
           except Exception, e:
               if tries_left == 0:
@@ -223,7 +226,8 @@ def github_notification():
               time.sleep(5 - tries_left)
 
       logging.debug("Trigging builds for %d commits", len(shas))
-
+      logging.debug("First commit author name: %s, email: %s", author_name, author_email)
+      
       html_url = pull_request["html_url"]
 
       for sha in shas:
@@ -234,14 +238,16 @@ def github_notification():
                                "pending",
                                "Jenkins build is being scheduled")
 
-          logging.debug("Scheduling build the targetsite: %s with %s %s", targetsite, head_repo_name, sha)
+          logging.debug("Scheduling build the targetsite: %s with %s %s %s %s", targetsite, head_repo_name, sha, author_name, author_email)
           ok = jenkins.schedule_build(current_app,
                                       repo_config,
                                       targetsite,
                                       number,
                                       head_repo_name,
                                       sha,
-                                      html_url)
+                                      html_url,
+                                      author_name,
+                                      author_email)
 
           if ok:
               github_state = "pending"

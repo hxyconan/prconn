@@ -127,6 +127,29 @@ def get_commits(app, repo_config, pull_request, build_commits=None):
         logging.error("Invalid value '%s' for BUILD_COMMITS for repo: %s",
                       build_commits, base_repo_name)
 
+##
+# Function to get commit auther and email
+# Return: author_name and auther_email
+##
+def get_commit_author(app, repo_config, pull_request):
+    commits_url = pull_request["commits_url"]
+    s = get_session_for_repo(app, repo_config)
+
+    headers = {"Content-Type": "application/json", "User-Agent": "prconn-requests"}
+    response = s.get(commits_url, headers=headers)
+    
+    if not response.ok:
+        raise Exception("Unable to get commits_url: {}".format(response.headers))
+    else:
+        commits_list = response.json()
+        author_name = commits_list[0]["commit"]["committer"]["name"]
+        author_email = commits_list[0]["commit"]["committer"]["email"]
+        if author_name or author_email:
+            logging.debug("Get commits_url OK. The latest commit author_name: %s, email: ", author_name, author_email)
+            return author_name, author_email
+        else:
+            raise Exception("Author name or email is None")
+            
 
 def update_status(app, repo_config, repo_name, sha, state, desc,
                   target_url=None):

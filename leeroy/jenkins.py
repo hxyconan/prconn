@@ -10,7 +10,9 @@ normal_build_path = "/job/{job_name}/buildWithParameters"\
     "&TARGETSITE={targetsite}" \
     "&NUMBER={number}" \
     "&GIT_SHA1={git_sha1}" \
-    "&GITHUB_URL={github_url}"
+    "&GITHUB_URL={github_url}" \
+    "&AUTHOR_NAME={author_name}" \
+    "&AUTHOR_EMAIL={author_email}"
 
 auth_token_root_build_path = "/buildByToken/buildWithParameters" \
     "?job={job_name}" \
@@ -19,7 +21,9 @@ auth_token_root_build_path = "/buildByToken/buildWithParameters" \
     "&TARGETSITE={targetsite}" \
     "&NUMBER={number}" \
     "&GIT_SHA1={git_sha1}" \
-    "&GITHUB_URL={github_url}"
+    "&GITHUB_URL={github_url}" \
+    "&AUTHOR_NAME={author_name}" \
+    "&AUTHOR_EMAIL={author_email}"
 
 # Path define for delete pull request sandbox
 normal_delete_path = "/job/{delete_job_name}/buildWithParameters"\
@@ -50,7 +54,7 @@ def get_jenkins_url(app, repo_config):
     return repo_config.get("jenkins_url", app.config["JENKINS_URL"])
 
 
-def schedule_build(app, repo_config, targetsite, number, head_repo_name, sha, html_url):
+def schedule_build(app, repo_config, targetsite, number, head_repo_name, sha, html_url, author_name, author_email):
     base_repo_name = repo_config["github_repo"]
     job_name = repo_config["jenkins_job_name"]
 
@@ -66,7 +70,9 @@ def schedule_build(app, repo_config, targetsite, number, head_repo_name, sha, ht
                           number=number,
                           git_head_repo=head_repo_name,
                           git_sha1=sha,
-                          github_url=html_url)
+                          github_url=html_url,
+                          author_name=author_name,
+                          author_email=author_email)
 
     build_token = repo_config.get("jenkins_build_token",
                                   app.config.get("JENKINS_BUILD_TOKEN"))
